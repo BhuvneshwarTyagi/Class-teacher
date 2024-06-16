@@ -26,7 +26,13 @@ router.post("/assign", async (req, res) => {
                 name: 1,
                 employeeId: 1,
                 profileLink: 1
-            });
+            }).lean();
+            if(!teacherDoc){
+                throw {message : "No teacher found"};
+            }
+            await classTeacherModel.findOneAndDelete(
+                { id: teacherDoc._id },
+            ).lean();
             await classTeacherModel.findOneAndUpdate(
                 { class: Class, section: section },
                 {
@@ -39,7 +45,7 @@ router.post("/assign", async (req, res) => {
                     email: TeacherEmail
                 },
                 { upsert: true, new: true, setDefaultsOnInsert: true }
-            );
+            ).lean();
             res.status(200).json({
                 status: true
             });
