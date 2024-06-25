@@ -3,14 +3,26 @@ const router = express.Router();
 const { classTeacherModel, TeacherModel } = require("../backend/schemas");
 const verifyAccessToken = require('./../verification/verifyToken')
 
+const extractToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader) {
+        return res.status(401).json({ error: "Authorization header is missing" });
+    }
 
-router.post("/assign", async (req, res) => {
-    const decodedToken = verifyAccessToken(req.body.accessToken);
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({ error: "Bearer token is missing" });
+    }
+
+    req.token = token;
+    next();
+};
+router.delete("/delete", extractToken, async (req, res) => {
+    const decodedToken = verifyAccessToken(req.token);
     if (decodedToken.valid && (decodedToken.decoded.designation === 'Admin' || decodedToken.decoded.designation === 'Owner')) {
         try {
-            const Class = req.body.class;
-            const section = req.body.section;
-            const TeacherEmail = req.body.teacherEmail;
+            const Class = req.query.class;
+            const section = req.section.section;
 
             if (!Class) {
                 throw { message: "Class is not specified" };
@@ -18,26 +30,9 @@ router.post("/assign", async (req, res) => {
             if (!section) {
                 throw { message: "Section is not specified" };
             }
-            if (!TeacherEmail) {
-                throw { message: "Teacher email is not specified" };
-            }
-            const teacherDoc=await TeacherModel.findOne({ email: TeacherEmail }, {
-                _id: 1,
-            }).lean();
-            if(!teacherDoc){
-                throw {message : "No teacher found"};
-            }
+
             await classTeacherModel.findOneAndDelete(
-                { id: teacherDoc._id },
-            ).lean();
-            await classTeacherModel.findOneAndUpdate(
                 { class: Class, section: section },
-                {
-                    class: Class,
-                    section: section,
-                    id: teacherDoc._id,
-                },
-                { upsert: true, new: true, setDefaultsOnInsert: true }
             ).lean();
             res.status(200).json({
                 status: true
