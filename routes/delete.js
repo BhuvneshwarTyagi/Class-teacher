@@ -22,7 +22,7 @@ router.delete("/delete", extractToken, async (req, res) => {
     if (decodedToken.valid && (decodedToken.decoded.designation === 'Admin' || decodedToken.decoded.designation === 'Owner')) {
         try {
             const Class = req.query.class;
-            const section = req.section.section;
+            const section = req.query.section;
 
             if (!Class) {
                 throw { message: "Class is not specified" };
